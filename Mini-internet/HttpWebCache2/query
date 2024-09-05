@@ -1,0 +1,177 @@
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <fstream>
+#include <cstdlib>
+#include <cstring>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <unistd.h>
+
+#define BUFFER_SIZE 1024
+
+// Function to make a GET request to the specified URL
+/*void HttpGETrequest(const std::string& url) {
+    int sockfd;
+    struct sockaddr_in server_addr;
+    char buffer[BUFFER_SIZE];
+
+    // Parse URL to extract domain name and path
+    std::string domain, path;
+    size_t pos = url.find("://");
+    if (pos != std::string::npos) {
+        pos = url.find("/", pos + 3);
+        if (pos != std::string::npos) {
+            domain = url.substr(url.find("://") + 3, pos - (url.find("://") + 3));
+            path = url.substr(pos);
+        } else {
+            domain = url.substr(url.find("://") + 3);
+            path = "/";
+        }
+    } else {
+        pos = url.find("/");
+        if (pos != std::string::npos) {
+            domain = url.substr(0, pos);
+            path = url.substr(pos);
+        } else {
+            domain = url;
+            path = "/";
+        }
+    }
+
+    // Get IP address from domain name
+    struct hostent *server = gethostbyname(domain.c_str());
+    if (server == NULL) {
+        std::cerr << "Cannot resolve host: " << domain << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    // Create a socket
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) {
+        perror("Socket creation failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // Initialize server address structure
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(80); // HTTP port
+    memcpy(&server_addr.sin_addr.s_addr, server->h_addr, server->h_length);
+
+    // Connect to the server
+    if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+        perror("Connection failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // Send GET request
+    snprintf(buffer, BUFFER_SIZE, "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", path.c_str(), domain.c_str());
+    send(sockfd, buffer, strlen(buffer), 0);
+
+    // Receive and print server response
+    ssize_t bytes_received;
+    std::string response_content;
+    while ((bytes_received = recv(sockfd, buffer, BUFFER_SIZE, 0)) > 0) {
+        fwrite(buffer, 1, bytes_received, stdout);
+        response_content.append(buffer, bytes_received);
+    }
+	//cout<<response_content<<endl;
+	
+    if (bytes_received < 0) {
+        perror("Receive error");
+    }
+
+    // Close socket
+    close(sockfd);
+}*/
+
+// Function to make a GET request to the specified URL
+void make_get_request(const std::string& url) {
+    int sockfd;
+    struct sockaddr_in server_addr;
+    char buffer[BUFFER_SIZE];
+
+    // Parse URL to extract domain name
+    std::string domain;
+    size_t pos = url.find("://");
+    if (pos != std::string::npos) {
+        pos = url.find("/", pos + 3);
+        if (pos != std::string::npos) {
+            domain = url.substr(url.find("://") + 3, pos - (url.find("://") + 3));
+        } else {
+            domain = url.substr(url.find("://") + 3);
+        }
+    } else {
+        pos = url.find("/");
+        if (pos != std::string::npos) {
+            domain = url.substr(0, pos);
+        } else {
+            domain = url;
+        }
+    }
+
+    // Get IP address from domain name
+    struct hostent *server = gethostbyname(domain.c_str());
+    if (server == NULL) {
+        std::cerr << "Cannot resolve host: " << domain << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    // Create a socket
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) {
+        perror("Socket creation failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // Initialize server address structure
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(80); // HTTP port
+    memcpy(&server_addr.sin_addr.s_addr, server->h_addr, server->h_length);
+
+    // Connect to the server
+    if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+        perror("Connection failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // Send GET request
+    snprintf(buffer, BUFFER_SIZE, "GET / HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", domain.c_str());
+    send(sockfd, buffer, strlen(buffer), 0);
+
+    // Receive and print server response
+    ssize_t bytes_received;
+    while ((bytes_received = recv(sockfd, buffer, BUFFER_SIZE, 0)) > 0) {
+        fwrite(buffer, 1, bytes_received, stdout);
+    }
+
+    if (bytes_received < 0) {
+        perror("Receive error");
+    }
+
+    // Close socket
+    close(sockfd);
+}
+
+int main() {
+    std::string url;
+
+    // Input URL from user
+    std::cout << "Enter the URL: ";
+    std::getline(std::cin, url);
+
+    // Make GET request
+    make_get_request(url);
+
+    return 0;
+}
+
+
+I think the above code is not handling the paths within a server correctly.
+For eg.
+http://neverssl.com/page1
+This should give 404 error not found. But the code is fetching the content of the home page
